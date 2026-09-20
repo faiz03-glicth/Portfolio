@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { portfolioService } from "@/lib/services/portfolio-service";
+import { projectService } from "@/lib/services/project-service";
 import { Container } from "@/components/ui/container";
 import { Prose } from "@/components/ui/prose";
 import { Section } from "@/components/ui/section";
@@ -36,7 +37,7 @@ export async function generateMetadata({
   params,
 }: ProjectPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const project = await portfolioService.getProjectBySlug(slug);
+  const project = await projectService.getProjectBySlug(slug);
 
   if (!project) {
     return buildMetadata({ title: "Project not found", noIndex: true });
@@ -51,7 +52,7 @@ export async function generateMetadata({
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
-  const project = await portfolioService.getProjectBySlug(slug);
+  const project = await projectService.getProjectBySlug(slug);
 
   if (!project) notFound();
 

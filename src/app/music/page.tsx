@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { recentlyPlayedFallback } from "@/data/fallback/recently-played";
 import { portfolioService } from "@/lib/services/portfolio-service";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { RecentlyPlayed } from "@/components/music/recently-played";
+import { loadRecentlyPlayed } from "@/components/sections/music-section";
 import { buildMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = buildMetadata({
@@ -13,7 +13,11 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function MusicPage() {
-  const socialLinks = await portfolioService.getSocialLinks();
+  const [socialLinks, recent] = await Promise.all([
+    portfolioService.getSocialLinks(),
+    loadRecentlyPlayed(20),
+  ]);
+
   const spotify = socialLinks.find((link) => link.platform === "spotify");
 
   return (
@@ -27,7 +31,8 @@ export default async function MusicPage() {
 
       <div className="mt-12">
         <RecentlyPlayed
-          tracks={recentlyPlayedFallback}
+          tracks={recent.tracks}
+          status={recent.status}
           profileUrl={spotify?.url}
         />
       </div>

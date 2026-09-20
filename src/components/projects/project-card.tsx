@@ -33,6 +33,16 @@ export function ProjectCard({
   const hasRepoStats =
     typeof project.stars === "number" || typeof project.forks === "number";
 
+  // Only curated projects (static or database) have a write-up, and therefore
+  // a detail page. A repository discovered through the GitHub or GitLab
+  // adapter has no such route, so its title links to the repository instead of
+  // to a URL that would 404.
+  const isCurated =
+    project.source === "static" || project.source === "database";
+  const detailHref = isCurated
+    ? `/projects/${project.slug}`
+    : (project.githubUrl ?? project.gitlabUrl ?? project.liveUrl);
+
   return (
     <Card interactive className="flex h-full flex-col overflow-hidden">
       <ProjectThumbnail project={project} priority={priority} />
@@ -50,12 +60,26 @@ export function ProjectCard({
 
         <div className="space-y-1.5">
           <CardTitle>
-            <Link
-              href={`/projects/${project.slug}`}
-              className="rounded-sm after:absolute after:inset-0 after:content-['']"
-            >
-              {project.title}
-            </Link>
+            {isCurated ? (
+              <Link
+                href={detailHref ?? "/projects"}
+                className="rounded-sm after:absolute after:inset-0 after:content-['']"
+              >
+                {project.title}
+              </Link>
+            ) : detailHref ? (
+              <a
+                href={detailHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-sm after:absolute after:inset-0 after:content-['']"
+              >
+                {project.title}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              project.title
+            )}
           </CardTitle>
           <CardDescription>{project.description}</CardDescription>
         </div>
