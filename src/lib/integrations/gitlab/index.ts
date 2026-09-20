@@ -1,0 +1,1 @@
+export { gitlabService } from "./service";
