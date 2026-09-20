@@ -52,7 +52,8 @@ Three rules hold the structure together:
 
 Full rationale, including what would justify breaking this into services:
 [`docs/architecture.md`](docs/architecture.md). Database schema, security model
-and setup: [`docs/database.md`](docs/database.md).
+and setup: [`docs/database.md`](docs/database.md). Provider adapters, tokens and
+failure behaviour: [`docs/integrations.md`](docs/integrations.md).
 
 ### Project structure
 
@@ -75,6 +76,7 @@ src/
 │   ├── types/               domain models (portfolio, integrations, Result)
 │   ├── supabase/            clients (anon + service-role), env, row types
 │   ├── repositories/        one per aggregate, returns Result<T>
+│   ├── integrations/        spotify/ github/ gitlab/ — adapters, server-only
 │   ├── services/            composition, caching, static fallback
 │   ├── metadata.ts          per-page metadata builder
 │   └── utils.ts             formatting and class helpers
@@ -154,6 +156,8 @@ npm run lint          # ESLint
 npm run typecheck     # tsc --noEmit
 npm run format        # Prettier write
 npm run format:check  # Prettier check (used in CI)
+
+npm run spotify:token # one-time: obtain a Spotify refresh token
 ```
 
 ---
@@ -181,8 +185,22 @@ never committed — `.env*` is gitignored except the example.
 All three are optional. With none set, the site renders the static content in
 `src/data/` — see [`docs/database.md`](docs/database.md).
 
-Variables for Spotify, GitHub and GitLab are added by the `integration` branch
-and documented there.
+### Integrations (`integration`)
+
+| Variable                | Required | Purpose                                                                 |
+| ----------------------- | -------- | ----------------------------------------------------------------------- |
+| `SPOTIFY_CLIENT_ID`     | no       | Spotify app credentials. All three are needed together.                 |
+| `SPOTIFY_CLIENT_SECRET` | no       | **Server only.**                                                        |
+| `SPOTIFY_REFRESH_TOKEN` | no       | **Server only.** Obtain once via `npm run spotify:token`.               |
+| `GITHUB_USERNAME`       | no       | Enables the GitHub panel. Public data needs no token.                   |
+| `GITHUB_TOKEN`          | no       | **Server only.** Raises rate limits, unlocks the contribution calendar. |
+| `GITLAB_USERNAME`       | no       | Enables the GitLab panel.                                               |
+| `GITLAB_TOKEN`          | no       | **Server only.** `read_api` scope only.                                 |
+| `GITLAB_BASE_URL`       | no       | For a self-hosted instance. Defaults to gitlab.com.                     |
+
+Each integration degrades on its own: an unconfigured provider shows sample
+data, a failing one shows an unavailable state, and neither affects the rest of
+the page. See [`docs/integrations.md`](docs/integrations.md).
 
 > **Never** expose `SUPABASE_SERVICE_ROLE_KEY`, `SPOTIFY_CLIENT_SECRET`,
 > `SPOTIFY_REFRESH_TOKEN`, `GITHUB_TOKEN` or `GITLAB_TOKEN` to the client.

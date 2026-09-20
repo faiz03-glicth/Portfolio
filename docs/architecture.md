@@ -178,7 +178,8 @@ are in [`database.md`](database.md).
 
 ## 7. Integration Architecture
 
-_(Implemented on the `integration` branch.)_
+Setup, tokens and per-provider caveats are in
+[`integrations.md`](integrations.md).
 
 Every provider gets the same four-file shape:
 
