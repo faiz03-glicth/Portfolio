@@ -1,0 +1,74 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+/dist
+
+# testing
+/coverage
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
+# environment — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# typescript
+*.tsbuildinfo
+
+# deployment
+.vercel
+
+# ---------------------------------------------------------------------------
+# Editor, IDE and AI-agent workspace files
+#
+# These describe how one contributor's machine is configured, not how the
+# project works, so they are not part of the repository. Root-anchored so a
+# legitimate docs/instructions.md is unaffected.
+# ---------------------------------------------------------------------------
+.claude/
+.cursor/
+.cursorrules
+cursorrules
+.windsurfrules
+.aider*
+.continue/
+.codeium/
+.github/copilot-instructions.md
+
+/CLAUDE.md
+/AGENTS.md
+/ai.md
+/prompt.md
+/instructions.md
+/tasks.md
+/todo.md
+/TODO.md
