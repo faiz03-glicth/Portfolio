@@ -1,0 +1,263 @@
+# =============================================================================
+# GitLab CI/CD
+#
+#   install → verify (lint · format · types) → test → build → e2e → deploy
+#
+# Two rules shape this file:
+#
+#   1. Nothing deploys unless every gate passed. Deploy has no `allow_failure`
+#      anywhere upstream of it, and it only runs on `main`.
+#   2. Work is done once. `npm ci` runs in a single job and its node_modules
+#      is passed forward as an artifact; the build runs once and its output is
+#      what both E2E and deploy consume. Re-installing per job is the usual way
+#      these pipelines end up taking fifteen minutes.
+# =============================================================================
+
+stages:
+  - install
+  - verify
+  - test
+  - build
+  - e2e
+  - deploy
+
+default:
+  image: node:${NODE_VERSION}-bookworm-slim
+  interruptible: true
+  tags:
+    - docker
+
+variables:
+  # Must match the Node major version running on the VPS. Building on 22 and
+  # running on 20 is a class of bug that only shows up in production.
+  NODE_VERSION: "22"
+  # Keeps npm's cache inside the project so GitLab's cache can actually see it.
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  NEXT_TELEMETRY_DISABLED: "1"
+  # Fail a job that hangs rather than burning the full runner timeout.
+  GIT_DEPTH: "20"
+
+# Lockfile-keyed cache: restored by every job, written only by `install`.
+.npm_cache: &npm_cache
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - .npm/
+  policy: pull
+
+# -----------------------------------------------------------------------------
+# install
+# -----------------------------------------------------------------------------
+install:
+  stage: install
+  cache:
+    <<: *npm_cache
+    policy: pull-push
+  script:
+    # `npm ci` not `npm install`: it installs exactly the lockfile and fails if
+    # package.json and the lockfile disagree, which is a defect worth catching.
+    - npm ci --prefer-offline --no-audit --no-fund
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - node_modules/
+
+# -----------------------------------------------------------------------------
+# verify — the cheap, fast gates. All three run in parallel.
+# -----------------------------------------------------------------------------
+.verify_job: &verify_job
+  stage: verify
+  cache: *npm_cache
+  needs: ["install"]
+
+lint:
+  <<: *verify_job
+  script:
+    - npm run lint
+
+format:
+  <<: *verify_job
+  script:
+    # Catches a commit made without the formatter. Cheap, and prevents diffs
+    # that are entirely whitespace.
+    - npm run format:check
+
+typecheck:
+  <<: *verify_job
+  script:
+    - npm run typecheck
+
+# -----------------------------------------------------------------------------
+# test — unit and integration. No network access required.
+# -----------------------------------------------------------------------------
+test:
+  stage: test
+  cache: *npm_cache
+  needs: ["install"]
+  script:
+    - npm run test:coverage
+  coverage: '/^All files\s*\|\s*([\d.]+)/'
+  artifacts:
+    expire_in: 1 week
+    when: always
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+
+# -----------------------------------------------------------------------------
+# build — produces the standalone artifact that E2E and deploy both use.
+# -----------------------------------------------------------------------------
+build:
+  stage: build
+  cache: *npm_cache
+  needs: ["install"]
+  variables:
+    NEXT_PUBLIC_APP_ENV: "production"
+  script:
+    # Public build-time values come from CI/CD variables. Server-only secrets
+    # are NOT set here — they are read at runtime on the VPS, so a build log or
+    # a cached artifact can never contain one.
+    - npm run build:standalone
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - .next/standalone/
+      - .next/static/
+      - public/
+
+# -----------------------------------------------------------------------------
+# e2e — runs against the standalone server, the exact artifact that deploys.
+# -----------------------------------------------------------------------------
+e2e:
+  stage: e2e
+  # Playwright's own image: it ships the browsers and system libraries, so the
+  # job does not spend a minute installing them on every run.
+  image: mcr.microsoft.com/playwright:v1.63.0-noble
+  cache: *npm_cache
+  needs:
+    - job: install
+      artifacts: true
+    - job: build
+      artifacts: true
+  variables:
+    NEXT_PUBLIC_APP_ENV: "testing"
+  script:
+    # The build artifact is already assembled, so this only starts the server.
+    - npm run test:e2e:ci
+  artifacts:
+    expire_in: 1 week
+    when: always
+    paths:
+      - playwright-report/
+      - test-results/
+    reports:
+      junit: playwright-report/results.xml
+
+# -----------------------------------------------------------------------------
+# deploy — Hostinger VPS over SSH.
+#
+# Runs only on `main`, only after every gate above has passed, and is manual by
+# default. Flip `when: manual` to `when: on_success` for continuous deployment.
+#
+# Required protected + masked CI/CD variables:
+#   SSH_PRIVATE_KEY   deploy key, base64-encoded (File type also works)
+#   SSH_KNOWN_HOSTS   output of `ssh-keyscan -H <host>` — pins the host key
+#   DEPLOY_HOST       VPS hostname or IP
+#   DEPLOY_USER       non-root deploy user
+#   DEPLOY_PATH       e.g. /var/www/portfolio
+#
+# No credential is ever written into this file or into the image.
+# -----------------------------------------------------------------------------
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  needs:
+    - job: build
+      artifacts: true
+    - job: e2e
+      artifacts: false
+  environment:
+    name: production
+    url: $DEPLOY_URL
+  rules:
+    # Never deploy from a branch or a merge request.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: false
+    - when: never
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    # Host key pinning, not StrictHostKeyChecking=no. Disabling the check makes
+    # the deploy vulnerable to a machine-in-the-middle on every run.
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+  script:
+    - RELEASE="$DEPLOY_PATH/releases/$CI_COMMIT_SHORT_SHA"
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p $RELEASE"
+
+    # Ship the assembled bundle. `--delete` keeps a release directory from
+    # accumulating files that no longer exist in the build.
+    - rsync -az --delete .next/standalone/ "$DEPLOY_USER@$DEPLOY_HOST:$RELEASE/"
+
+    # Atomic cutover: the symlink swap is a single operation, so a request
+    # never sees a half-copied release.
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "ln -sfn $RELEASE $DEPLOY_PATH/current.new && mv -Tf $DEPLOY_PATH/current.new $DEPLOY_PATH/current"
+
+    # `pm2 reload` starts the new process before stopping the old one, so the
+    # deploy has no downtime window. `restart` would drop in-flight requests.
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd $DEPLOY_PATH && pm2 reload ecosystem.config.cjs --update-env && pm2 save"
+
+    # Prune old releases, keeping the last five so a rollback is one symlink.
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd $DEPLOY_PATH/releases && ls -1tr | head -n -5 | xargs -r rm -rf"
+
+    # Deployment is not done until the running site answers.
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "curl -fsS -o /dev/null -w '%{http_code}\n' --retry 5 --retry-delay 2 --retry-all-errors http://127.0.0.1:3000/"
+  after_script:
+    - rm -f ~/.ssh/id_ed25519
+
+# -----------------------------------------------------------------------------
+# rollback — repoints `current` at the previous release and reloads.
+#
+# Always manual. Kept as a pipeline job rather than a runbook step so it is
+# available under pressure without anyone needing SSH access.
+# -----------------------------------------------------------------------------
+rollback:
+  stage: deploy
+  image: alpine:3.20
+  needs: []
+  environment:
+    name: production
+    url: $DEPLOY_URL
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+    - when: never
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+  script:
+    - |
+      ssh "$DEPLOY_USER@$DEPLOY_HOST" "
+        set -e
+        cd $DEPLOY_PATH/releases
+        PREVIOUS=\$(ls -1tr | tail -n 2 | head -n 1)
+        if [ -z \"\$PREVIOUS\" ]; then echo 'No previous release to roll back to.'; exit 1; fi
+        echo \"Rolling back to \$PREVIOUS\"
+        ln -sfn $DEPLOY_PATH/releases/\$PREVIOUS $DEPLOY_PATH/current.new
+        mv -Tf $DEPLOY_PATH/current.new $DEPLOY_PATH/current
+        cd $DEPLOY_PATH && pm2 reload ecosystem.config.cjs --update-env
+      "
+  after_script:
+    - rm -f ~/.ssh/id_ed25519
