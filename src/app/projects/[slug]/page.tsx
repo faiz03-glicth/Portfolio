@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { projectBySlug, projects } from "@/data/projects";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { Container } from "@/components/ui/container";
 import { Prose } from "@/components/ui/prose";
 import { Section } from "@/components/ui/section";
@@ -20,16 +20,23 @@ type ProjectPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-/** Pre-renders every project at build time; the set is known and small. */
-export function generateStaticParams() {
-  return projects.map((project) => ({ slug: project.slug }));
+/**
+ * Pre-renders every project at build time; the set is known and small.
+ *
+ * Reads slugs through the service, so a database-backed project gets a static
+ * page too. If Supabase is unreachable during the build this falls back to the
+ * static slugs rather than producing a site with no project pages.
+ */
+export async function generateStaticParams() {
+  const slugs = await portfolioService.getProjectSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
   params,
 }: ProjectPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const project = projectBySlug(slug);
+  const project = await portfolioService.getProjectBySlug(slug);
 
   if (!project) {
     return buildMetadata({ title: "Project not found", noIndex: true });
@@ -44,7 +51,7 @@ export async function generateMetadata({
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
-  const project = projectBySlug(slug);
+  const project = await portfolioService.getProjectBySlug(slug);
 
   if (!project) notFound();
 

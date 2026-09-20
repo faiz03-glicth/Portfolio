@@ -79,15 +79,3 @@ export const experiences: readonly Experience[] = [
     sortOrder: 70,
   },
 ] as const;
-
-/** Most recent first — the order the timeline renders. */
-export function experiencesByRecency(): readonly Experience[] {
-  return [...experiences].sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) return b.sortOrder - a.sortOrder;
-    return b.startDate.localeCompare(a.startDate);
-  });
-}
-
-export function currentExperiences(): readonly Experience[] {
-  return experiences.filter((entry) => entry.current);
-}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { projects } from "@/data/projects";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { ProjectFilter } from "@/components/projects/project-filter";
@@ -21,7 +21,10 @@ type ProjectsPageProps = {
 export default async function ProjectsPage({
   searchParams,
 }: ProjectsPageProps) {
-  const { type } = await searchParams;
+  const [{ type }, projects] = await Promise.all([
+    searchParams,
+    portfolioService.getProjects(),
+  ]);
 
   // Ignore an unknown `type` rather than 404-ing — a stale shared link should
   // still land somewhere useful.

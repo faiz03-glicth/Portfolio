@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
-import { profile } from "@/data/profile";
-import { socialLinks } from "@/data/social";
-import { technologiesByCategory, technologyCategories } from "@/data/skills";
+import { profile as staticProfile } from "@/data/profile";
+import { technologyCategories } from "@/data/skills";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -13,17 +13,26 @@ import { SocialLinkList } from "@/components/ui/social-links";
 import { Tag } from "@/components/ui/tag";
 import { buildMetadata } from "@/lib/metadata";
 
+// Metadata is evaluated before the page body renders, and a database round
+// trip here would block the document head on every request. The static summary
+// is a stable description; the rendered page still shows live content.
 export const metadata: Metadata = buildMetadata({
   title: "About",
-  description: profile.summary,
+  description: staticProfile.summary,
   path: "/about",
 });
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [profile, socialLinks, technologies] = await Promise.all([
+    portfolioService.getProfile(),
+    portfolioService.getSocialLinks(),
+    portfolioService.getTechnologies(),
+  ]);
+
   const groups = technologyCategories
     .map((category) => ({
       ...category,
-      items: technologiesByCategory(category.id),
+      items: technologies.filter((tech) => tech.category === category.id),
     }))
     .filter((group) => group.items.length > 0);
 

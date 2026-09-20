@@ -145,11 +145,3 @@ export const projects: readonly Project[] = [
     primaryLanguage: "Python",
   },
 ] as const;
-
-export function featuredProjects(): readonly Project[] {
-  return projects.filter((project) => project.featured);
-}
-
-export function projectBySlug(slug: string): Project | undefined {
-  return projects.find((project) => project.slug === slug);
-}

@@ -1,14 +1,15 @@
 import type { MetadataRoute } from "next";
 import { mainNav } from "@/config/navigation";
 import { siteConfig } from "@/config/site";
-import { projects } from "@/data/projects";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { absoluteUrl } from "@/lib/utils";
 
 /**
  * Generated from the same navigation config the header renders, so a new page
  * cannot be added to the site and forgotten in the sitemap.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const projects = await portfolioService.getProjects();
   const now = new Date();
 
   const pages: MetadataRoute.Sitemap = mainNav.map((item) => ({

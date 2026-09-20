@@ -1,7 +1,5 @@
 import { ArrowRight, MapPin } from "lucide-react";
-import { profile } from "@/data/profile";
-import { socialLinks } from "@/data/social";
-import { primaryTechnologies } from "@/data/skills";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -18,12 +16,19 @@ const availabilityTone = {
 /**
  * Above-the-fold content.
  *
- * A pure Server Component reading only static data — it must never wait on
- * Supabase or an external API. Whatever else is slow on the page, the hero
- * paints immediately.
+ * Reads through `portfolioService`, which resolves to database content when
+ * Supabase is configured and to the static modules otherwise. Either way it
+ * never waits on an *external* API — whatever else is slow on the page, the
+ * hero paints from content the application already owns.
  */
-export function Hero() {
-  const highlights = primaryTechnologies().slice(0, 8);
+export async function Hero() {
+  const [profile, socialLinks, technologies] = await Promise.all([
+    portfolioService.getProfile(),
+    portfolioService.getSocialLinks(),
+    portfolioService.getTechnologies(),
+  ]);
+
+  const highlights = technologies.filter((tech) => tech.primary).slice(0, 8);
 
   return (
     <section className="relative overflow-hidden border-b border-border">

@@ -1,12 +1,13 @@
 import { ArrowRight } from "lucide-react";
-import { experiencesByRecency } from "@/data/experience";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { ExperienceTimeline } from "@/components/experience/experience-timeline";
 
-export function ExperienceSection() {
-  const recent = experiencesByRecency().slice(0, 3);
+export async function ExperienceSection() {
+  const experiences = await portfolioService.getExperiences();
+  const recent = experiences.slice(0, 3);
 
   return (
     <Section id="experience">

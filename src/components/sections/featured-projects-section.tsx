@@ -1,12 +1,12 @@
 import { ArrowRight } from "lucide-react";
-import { featuredProjects } from "@/data/projects";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { ProjectGrid } from "@/components/projects/project-grid";
 
-export function FeaturedProjectsSection() {
-  const projects = featuredProjects();
+export async function FeaturedProjectsSection() {
+  const projects = await portfolioService.getFeaturedProjects();
 
   return (
     <Section id="projects" tone="muted">

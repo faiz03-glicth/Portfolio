@@ -1,12 +1,16 @@
 import { ArrowUpRight, Mail } from "lucide-react";
-import { profile } from "@/data/profile";
-import { socialLinks } from "@/data/social";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { SocialLinkList } from "@/components/ui/social-links";
 
-export function ContactSection() {
+export async function ContactSection() {
+  const [profile, socialLinks] = await Promise.all([
+    portfolioService.getProfile(),
+    portfolioService.getSocialLinks(),
+  ]);
+
   return (
     <Section id="contact" tone="muted">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-6 py-12 sm:px-12 sm:py-16">

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { footerNav } from "@/config/navigation";
 import { siteConfig } from "@/config/site";
-import { socialLinks } from "@/data/social";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { Container } from "@/components/ui/container";
 import { SocialLinkList } from "@/components/ui/social-links";
 
-export function Footer() {
+export async function Footer() {
+  const socialLinks = await portfolioService.getSocialLinks();
   const year = new Date().getFullYear();
 
   return (

@@ -7,6 +7,8 @@
  * off and the UI renders its static fallback data instead.
  */
 
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+
 export type AppEnv = "local" | "development" | "testing" | "production";
 
 function resolveEnv(): AppEnv {
@@ -32,7 +34,7 @@ export const appConfig = {
    * Branches `database` and `integration` extend this object.
    */
   features: {
-    supabase: false,
+    supabase: isSupabaseConfigured(),
     spotify: false,
     github: false,
     gitlab: false,

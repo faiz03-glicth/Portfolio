@@ -31,9 +31,3 @@ export const socialLinks: readonly SocialLink[] = [
     handle: "faiz03@graduate.utm.my",
   },
 ] as const;
-
-export function socialLinkFor(
-  platform: SocialLink["platform"],
-): SocialLink | undefined {
-  return socialLinks.find((link) => link.platform === platform);
-}

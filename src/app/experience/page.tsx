@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { experiencesByRecency } from "@/data/experience";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { ExperienceTimeline } from "@/components/experience/experience-timeline";
@@ -12,8 +12,8 @@ export const metadata: Metadata = buildMetadata({
   path: "/experience",
 });
 
-export default function ExperiencePage() {
-  const experiences = experiencesByRecency();
+export default async function ExperiencePage() {
+  const experiences = await portfolioService.getExperiences();
 
   return (
     <Section size="large" containerWidth="prose">

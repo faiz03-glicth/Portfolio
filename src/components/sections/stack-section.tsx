@@ -1,4 +1,5 @@
-import { technologiesByCategory, technologyCategories } from "@/data/skills";
+import { technologyCategories } from "@/data/skills";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { SectionHeading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { Tag } from "@/components/ui/tag";
@@ -11,11 +12,15 @@ import { staggerDelay } from "@/lib/utils";
  * is a data edit; nothing here needs to change, and no technology carries its
  * own bespoke styling.
  */
-export function StackSection() {
+export async function StackSection() {
+  const technologies = await portfolioService.getTechnologies();
+
+  // Category order and copy stay in `src/data/skills.ts`: which categories
+  // exist and how they are described is a presentation decision, not data.
   const groups = technologyCategories
     .map((category) => ({
       ...category,
-      items: technologiesByCategory(category.id),
+      items: technologies.filter((tech) => tech.category === category.id),
     }))
     .filter((group) => group.items.length > 0);
 

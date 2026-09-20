@@ -80,16 +80,6 @@ export const technologies: readonly Technology[] = [
   { id: "linux", name: "Linux", category: "tools" },
 ] as const;
 
-export function technologiesByCategory(
-  category: TechnologyCategory,
-): readonly Technology[] {
-  return technologies.filter((tech) => tech.category === category);
-}
-
-export function primaryTechnologies(): readonly Technology[] {
-  return technologies.filter((tech) => tech.primary);
-}
-
 /** Resolves display names for the string IDs stored on projects. */
 export function technologyName(id: string): string {
   return technologies.find((tech) => tech.id === id)?.name ?? id;

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowUpRight, Clock, Mail, MapPin } from "lucide-react";
-import { profile } from "@/data/profile";
-import { socialLinks } from "@/data/social";
+import { profile as staticProfile } from "@/data/profile";
+import { portfolioService } from "@/lib/services/portfolio-service";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/heading";
@@ -11,17 +11,22 @@ import { buildMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = buildMetadata({
   title: "Contact",
-  description: `Get in touch with ${profile.name} — email and social links.`,
+  description: `Get in touch with ${staticProfile.name} — email and social links.`,
   path: "/contact",
 });
 
-const facts = [
-  { icon: MapPin, label: "Based in", value: profile.location },
-  { icon: Clock, label: "Timezone", value: "GMT+8 (MYT)" },
-  { icon: Mail, label: "Response time", value: "Usually within two days" },
-];
+export default async function ContactPage() {
+  const [profile, socialLinks] = await Promise.all([
+    portfolioService.getProfile(),
+    portfolioService.getSocialLinks(),
+  ]);
 
-export default function ContactPage() {
+  const facts = [
+    { icon: MapPin, label: "Based in", value: profile.location },
+    { icon: Clock, label: "Timezone", value: "GMT+8 (MYT)" },
+    { icon: Mail, label: "Response time", value: "Usually within two days" },
+  ];
+
   return (
     <Section size="large" containerWidth="prose">
       <SectionHeading
