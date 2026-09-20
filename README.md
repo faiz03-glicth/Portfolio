@@ -51,7 +51,8 @@ Three rules hold the structure together:
    loading / empty / error state.
 
 Full rationale, including what would justify breaking this into services:
-[`docs/architecture.md`](docs/architecture.md).
+[`docs/architecture.md`](docs/architecture.md). Database schema, security model
+and setup: [`docs/database.md`](docs/database.md).
 
 ### Project structure
 
@@ -72,6 +73,9 @@ src/
 ├── data/                    static portfolio content + integration fallbacks
 ├── lib/
 │   ├── types/               domain models (portfolio, integrations, Result)
+│   ├── supabase/            clients (anon + service-role), env, row types
+│   ├── repositories/        one per aggregate, returns Result<T>
+│   ├── services/            composition, caching, static fallback
 │   ├── metadata.ts          per-page metadata builder
 │   └── utils.ts             formatting and class helpers
 └── styles/
@@ -166,8 +170,19 @@ never committed — `.env*` is gitignored except the example.
 | `NEXT_PUBLIC_APP_URL` | no       | Public origin. Drives canonical URLs, sitemap, OG tags. Defaults to `http://localhost:3000`.      |
 | `NEXT_PUBLIC_APP_ENV` | no       | `local` \| `development` \| `testing` \| `production`. Non-production environments are `noindex`. |
 
-Variables for Supabase, Spotify, GitHub and GitLab are added by their
-respective branches and documented there.
+### Supabase (`database`)
+
+| Variable                        | Required | Purpose                                                  |
+| ------------------------------- | -------- | -------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | no       | Project URL. Absent means static content.                |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no       | Publishable key. Constrained by Row Level Security.      |
+| `SUPABASE_SERVICE_ROLE_KEY`     | no       | Bypasses RLS. **Server only.** Not needed for rendering. |
+
+All three are optional. With none set, the site renders the static content in
+`src/data/` — see [`docs/database.md`](docs/database.md).
+
+Variables for Spotify, GitHub and GitLab are added by the `integration` branch
+and documented there.
 
 > **Never** expose `SUPABASE_SERVICE_ROLE_KEY`, `SPOTIFY_CLIENT_SECRET`,
 > `SPOTIFY_REFRESH_TOKEN`, `GITHUB_TOKEN` or `GITLAB_TOKEN` to the client.

@@ -161,9 +161,8 @@ duration ends up in a stylesheet.
 
 ## 6. Database Architecture
 
-_(Implemented on the `database` branch.)_
-
-Supabase (managed PostgreSQL), free tier.
+Supabase (managed PostgreSQL), free tier. Setup, schema and verification steps
+are in [`database.md`](database.md).
 
 - Access goes through **repositories** — one per aggregate. Components never
   import the Supabase client.
