@@ -76,8 +76,13 @@ export function toContributionDays(
 
   const end = new Date();
   end.setUTCHours(0, 0, 0, 0);
-  // Align the last column to a Sunday so weeks render as clean columns.
-  end.setUTCDate(end.getUTCDate() - end.getUTCDay());
+  // End on the most recent Saturday. The window is 371 days = 53 whole weeks,
+  // so ending on a Saturday makes it *start* on a Sunday, and chunking the
+  // flat array into sevens yields Sunday-to-Saturday columns.
+  //
+  // Ending on a Sunday instead (a tempting `- getUTCDay()`) is off by one: the
+  // range would begin on a Monday and every column would be shifted a day.
+  end.setUTCDate(end.getUTCDate() - ((end.getUTCDay() + 1) % 7));
 
   const calendar: ContributionDay[] = [];
   let total = 0;

@@ -31,8 +31,9 @@ function generateContributions(seed: number): ContributionDay[] {
 
   const end = new Date();
   end.setUTCHours(0, 0, 0, 0);
-  // Start on a Sunday so each rendered column is a clean week.
-  end.setUTCDate(end.getUTCDate() - end.getUTCDay());
+  // End on the most recent Saturday so the 371-day window starts on a Sunday
+  // and each rendered column is a clean Sunday-to-Saturday week.
+  end.setUTCDate(end.getUTCDate() - ((end.getUTCDay() + 1) % 7));
 
   for (let offset = DAYS - 1; offset >= 0; offset -= 1) {
     const date = new Date(end);
