@@ -22,6 +22,25 @@ type ProjectPageProps = {
 };
 
 /**
+ * Only the slugs `generateStaticParams` returns may be served.
+ *
+ * Without this, an unknown slug is rendered on demand, and because this
+ * segment carries a revalidation window the `notFound()` result gets
+ * prerendered and cached as a **200** — a soft 404. Search engines then index
+ * every mistyped project URL as a real page. (Observable before the fix:
+ * `x-nextjs-prerender: 1` on a 200 response for a nonexistent project.)
+ *
+ * With `dynamicParams = false`, Next rejects an unlisted slug before the page
+ * runs and returns a genuine 404.
+ *
+ * The trade-off, stated plainly: a project added to the database after a build
+ * has no page until the next build. That is acceptable here because the
+ * pipeline rebuilds on every push to `main` and portfolio content changes
+ * rarely — and a soft 404 is the worse failure of the two.
+ */
+export const dynamicParams = false;
+
+/**
  * Pre-renders every project at build time; the set is known and small.
  *
  * Reads slugs through the service, so a database-backed project gets a static
