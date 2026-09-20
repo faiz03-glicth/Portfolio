@@ -1,0 +1,13 @@
+# Normalise line endings. Without this, files committed from Windows arrive as
+# CRLF on the Linux CI runner and `prettier --check` fails on every file.
+* text=auto eol=lf
+
+# Binary assets must never be normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
