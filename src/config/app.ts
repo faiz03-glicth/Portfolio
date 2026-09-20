@@ -29,15 +29,22 @@ export const appConfig = {
   isProduction: resolveEnv() === "production",
 
   /**
-   * Each flag is derived from whether the relevant credentials actually exist,
-   * so a missing secret degrades to the static fallback instead of throwing.
-   * Branches `database` and `integration` extend this object.
+   * Derived from whether the relevant configuration actually exists, so a
+   * missing value degrades to a fallback instead of throwing.
+   *
+   * Only Supabase appears here. The external integrations are deliberately
+   * *not* flags on this object: their credentials are server-only variables
+   * with no `NEXT_PUBLIC_` prefix, so this module would report them as absent
+   * whenever it is evaluated in the browser. A flag that is silently wrong in
+   * half the places it is read is worse than no flag.
+   *
+   * Instead each adapter owns the question — `githubService.isConfigured()`,
+   * `gitlabService.isConfigured()`, `spotifyService.isConfigured()` — and
+   * those modules are `server-only`, so asking from the wrong place is a build
+   * error rather than a wrong answer.
    */
   features: {
     supabase: isSupabaseConfigured(),
-    spotify: false,
-    github: false,
-    gitlab: false,
   },
 
   /** Revalidation windows in seconds, per data class. */
