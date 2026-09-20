@@ -53,7 +53,9 @@ Three rules hold the structure together:
 Full rationale, including what would justify breaking this into services:
 [`docs/architecture.md`](docs/architecture.md). Database schema, security model
 and setup: [`docs/database.md`](docs/database.md). Provider adapters, tokens and
-failure behaviour: [`docs/integrations.md`](docs/integrations.md).
+failure behaviour: [`docs/integrations.md`](docs/integrations.md). Test strategy:
+[`docs/testing.md`](docs/testing.md). Deployment:
+[`docs/deployment.md`](docs/deployment.md).
 
 ### Project structure
 
@@ -158,6 +160,13 @@ npm run format        # Prettier write
 npm run format:check  # Prettier check (used in CI)
 
 npm run spotify:token # one-time: obtain a Spotify refresh token
+
+npm test              # unit + integration (Vitest)
+npm run test:coverage # ...with coverage
+npm run test:e2e      # build + Playwright (desktop and mobile)
+
+npm run build:standalone  # production build, assembled for deployment
+npm run start:standalone  # run that bundle exactly as the VPS does
 ```
 
 ---
@@ -239,10 +248,50 @@ Enforced structurally rather than by convention:
 
 ---
 
+## Testing
+
+| Level       | Runner     | Covers                                                                |
+| ----------- | ---------- | --------------------------------------------------------------------- |
+| Unit        | Vitest     | Mappers, formatters, theme tokens, content invariants                 |
+| Integration | Vitest     | HTTP transport, repository errors, service composition, route handler |
+| E2E         | Playwright | Rendering, navigation, theming, SEO, accessibility, degraded states   |
+
+E2E runs against the **standalone production bundle** — the same artifact that
+deploys — with no external providers configured, so every run also exercises
+the degraded path.
+
+```bash
+npm test          # 149 unit + integration tests
+npm run test:e2e  # 74 E2E tests across desktop and mobile
+```
+
+Details, and the two bugs the suite caught:
+[`docs/testing.md`](docs/testing.md).
+
+---
+
+## CI/CD
+
+```
+install → lint · format · typecheck → test → build → e2e → deploy
+```
+
+`deploy` is unreachable unless every gate passes, and runs only on `main`.
+See [`.gitlab-ci.yml`](.gitlab-ci.yml).
+
+---
+
 ## Deployment
 
-Target: **Hostinger VPS** running Node.js behind Nginx, managed by PM2.
-`next.config.mjs` emits `output: "standalone"` for exactly this.
+Target: **Hostinger VPS** — Node.js, PM2, Nginx, Let's Encrypt.
 
-Full deployment procedure and the GitLab CI pipeline are documented on the
-`testing` branch.
+Next.js needs a Node runtime, so shared hosting cannot run this application and
+a static export would mean deleting the integration layer. `output:
+"standalone"` produces a self-contained bundle; the VPS installs nothing.
+
+Deploys are atomic (symlink swap), zero-downtime (`pm2 reload`), health-checked,
+and rollback is a pipeline job. Secrets are read at runtime from a `.env` on the
+server, never compiled into the build.
+
+One-time setup: [`deploy/setup-vps.sh`](deploy/setup-vps.sh).
+Full procedure: [`docs/deployment.md`](docs/deployment.md).
