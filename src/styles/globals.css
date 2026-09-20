@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * No colour literals live in this file. The palettes come from
+ * `src/config/theme.ts` via the stylesheet injected in the root layout, so
+ * everything below refers to them through Tailwind's semantic utilities.
+ */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Keep anchored headings clear of the fixed header. */
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    @apply bg-background font-sans text-base text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading font-semibold text-foreground;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /*
+   * Focus styling is deliberately global rather than per-component: it is an
+   * accessibility guarantee, so no component gets to opt out by forgetting it.
+   */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  ::selection {
+    @apply bg-primary/25 text-foreground;
+  }
+
+  /* A restrained scrollbar that follows the palette instead of the OS. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--color-border)) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full border-4 border-solid border-transparent bg-border bg-clip-content;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-input bg-clip-content;
+  }
+}
+
+@layer components {
+  /*
+   * Skip link — visually hidden until focused, then pinned to the top-left.
+   * Rendered once in the root layout as the first focusable element.
+   */
+  .skip-link {
+    @apply sr-only;
+  }
+
+  .skip-link:focus-visible {
+    @apply not-sr-only fixed left-4 top-4 z-toast rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground;
+  }
+}
+
+@layer utilities {
+  /* Gradient headline treatment, used sparingly on hero/section titles. */
+  .text-gradient {
+    @apply bg-gradient-to-br from-foreground via-foreground to-primary bg-clip-text text-transparent;
+  }
+
+  /* Fades the last ~20% of an element — used for long scrolling token rows. */
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  }
+
+  /*
+   * Staggered entrance. Sections set `animation-delay` through this so the
+   * delay value stays a plain inline custom property rather than a class
+   * explosion of `delay-75`, `delay-150`, ...
+   */
+  .stagger {
+    animation-delay: var(--stagger-delay, 0ms);
+  }
+}
+
+/*
+ * Reduced motion: honour the OS setting everywhere at once. Individual
+ * components never need to check for it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
